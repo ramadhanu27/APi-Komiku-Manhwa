@@ -19,7 +19,11 @@
     "update:list": "node update.js list",
     "update:updates": "node update.js updates",
     "update:chapters": "node update.js chapters",
-    "update:schedule": "node scrapers/auto-update.js schedule"
+    "update:schedule": "node scrapers/auto-update.js schedule",
+    "test:scraper": "node test-scraper.js",
+    "test:list": "node test-scraper.js list",
+    "test:updates": "node test-scraper.js updates",
+    "test:chapter": "node test-scraper.js chapter"
   },
   "keywords": [
     "scraper",

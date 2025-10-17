@@ -34,12 +34,19 @@ jobs:
       - name: Check for changes
         id: check_changes
         run: |
+          MANGA_COUNT=$(jq '. | length' data/komiku-list.json)
+          echo "manga_count=$MANGA_COUNT" >> $GITHUB_OUTPUT
+          
           if [[ -n $(git status --porcelain data/komiku-list.json) ]]; then
             echo "changes=true" >> $GITHUB_OUTPUT
-            echo "New manga found!"
+            CHANGES=$(git diff --shortstat data/komiku-list.json)
+            echo "✅ New manga found!"
+            echo "📊 Changes: $CHANGES"
+            echo "📚 Total manga: $MANGA_COUNT"
           else
             echo "changes=false" >> $GITHUB_OUTPUT
-            echo "No new manga"
+            echo "ℹ️  No new manga"
+            echo "📚 Total manga: $MANGA_COUNT (unchanged)"
           fi
       
       - name: Commit and push if changed
@@ -53,9 +60,15 @@ jobs:
       
       - name: Create summary
         run: |
-          MANGA_COUNT=$(jq '. | length' data/komiku-list.json)
-          echo "### 📚 Manga List Updated" >> $GITHUB_STEP_SUMMARY
+          echo "### 📚 Manga List Scraper" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Total Manga:** $MANGA_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Manga:** ${{ steps.check_changes.outputs.manga_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changes:** ${{ steps.check_changes.outputs.changes == 'true' && '✅ Yes' || 'ℹ️ No' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Date:** $(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** ✅ Success" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.check_changes.outputs.changes }}" == "true" ]]; then
+            echo "✅ **New manga added!** Changes committed and deployed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ **No changes detected.** All manga up to date." >> $GITHUB_STEP_SUMMARY
+          fi

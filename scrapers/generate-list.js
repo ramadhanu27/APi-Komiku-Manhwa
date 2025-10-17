@@ -7,8 +7,8 @@ const path = require('path')
 const generateList = () => {
   console.log('\n📚 Generating komiku-list.json...\n')
   
-  const chapterDir = path.join(__dirname, '../public/Chapter/komiku')
-  const outputPath = path.join(__dirname, '../public/komiku-list.json')
+  const chapterDir = path.join(__dirname, '../data/Chapter/komiku')
+  const outputPath = path.join(__dirname, '../data/komiku-list.json')
   
   if (!fs.existsSync(chapterDir)) {
     console.error('❌ Chapter/komiku directory not found!')
@@ -62,7 +62,7 @@ const generateList = () => {
   // Save to file
   fs.writeFileSync(outputPath, JSON.stringify(manhwaList, null, 2))
   
-  console.log(`\n✅ Generated: public/komiku-list.json`)
+  console.log(`\n✅ Generated: data/komiku-list.json`)
   console.log(`📊 Total manhwa: ${manhwaList.length}`)
   
   // Show preview

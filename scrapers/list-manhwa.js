@@ -54,14 +54,19 @@ process.on('SIGTERM', handleShutdown) // Kill command
  * Scrape manhwa list saja (tanpa detail)
  */
 const scrapeManhwaList = async (maxScrolls = 25) => {
-  console.log(`\n🚀 Starting Komiku List Scraper...`)
-  console.log(`📜 Max scrolls: ${maxScrolls}\n`)
+  console.log(`\n Starting Komiku List Scraper...`)
+  console.log(` Max scrolls: ${maxScrolls}\n`)
   
-  console.log(`🌐 Launching browser...`)
+  console.log(` Launching browser...`)
   
   const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    headless: false,  // Show browser window
+    args: [
+      '--no-sandbox', 
+      '--disable-setuid-sandbox',
+      '--start-maximized'  // Start maximized
+    ],
+    defaultViewport: null  // Use full window size
   })
   
   const page = await browser.newPage()
@@ -77,21 +82,41 @@ const scrapeManhwaList = async (maxScrolls = 25) => {
     
     console.log(`\n📜 Scrolling to load manhwa...`)
     
+    // Setup output path first (for auto-save)
+    const outputDir = path.join(__dirname, '../data')
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true })
+    }
+    const filename = 'komiku-list.json'
+    const filepath = path.join(outputDir, filename)
+    currentFilepath = filepath
+    
+    // Load existing list
+    let existingList = []
+    if (fs.existsSync(filepath)) {
+      try {
+        existingList = JSON.parse(fs.readFileSync(filepath, 'utf8'))
+        console.log(`📋 Loaded existing list: ${existingList.length} manhwa\n`)
+      } catch (error) {
+        console.log(`⚠️  Could not load existing list\n`)
+      }
+    }
+    
     // Auto scroll
     let previousHeight = 0
     let scrollCount = 0
     let noChangeCount = 0
     
     while (scrollCount < maxScrolls && !isShuttingDown) {
-      // Scroll ke bawah
+      // Scroll ke bawah secara bertahap untuk trigger lazy loading
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight)
       })
       
       console.log(`  📜 Scroll ${scrollCount + 1}/${maxScrolls}`)
       
-      // Wait untuk content load (faster scroll)
-      await delay(800)
+      // Wait lebih lama untuk lazy loading (2 detik)
+      await delay(2000)
       
       // Check if shutting down
       if (isShuttingDown) {
@@ -104,18 +129,43 @@ const scrapeManhwaList = async (maxScrolls = 25) => {
       
       if (currentHeight === previousHeight) {
         noChangeCount++
-        console.log(`  ⚠️  No new content (${noChangeCount}/3)`)
+        console.log(`  ⚠️  No new content (${noChangeCount}/5)`)
         
-        if (noChangeCount >= 3) {
+        // Tunggu 5x sebelum berhenti (untuk lazy loading yang lambat)
+        if (noChangeCount >= 5) {
           console.log(`  ✅ Reached end of list`)
           break
         }
+        
+        // Extra wait jika tidak ada perubahan
+        await delay(1000)
       } else {
         noChangeCount = 0
       }
       
       previousHeight = currentHeight
       scrollCount++
+      
+      // Auto-save every 20 scrolls
+      if (scrollCount % 20 === 0 && scrollCount > 0) {
+        console.log(`\n💾 Auto-save at scroll ${scrollCount}...`)
+        const html = await page.content()
+        const $ = cheerio.load(html)
+        const tempList = []
+        $('.bge').each((i, el) => {
+          const $el = $(el)
+          const $link = $el.find('.kan a')
+          const title = $link.find('h3').text().trim()
+          const url = $link.attr('href')
+          const slug = url ? url.split('/manga/')[1]?.replace('/', '') : ''
+          const image = $el.find('.bgei img').attr('src') || ''
+          if (title && slug) {
+            tempList.push({ title, slug, url, image, genres: [] })
+          }
+        })
+        currentManhwaList = tempList
+        console.log(`   Saved ${tempList.length} manhwa\n`)
+      }
     }
     
     console.log(`\n✅ Scrolling complete, extracting data...\n`)
@@ -123,31 +173,6 @@ const scrapeManhwaList = async (maxScrolls = 25) => {
     // Get HTML
     const html = await page.content()
     const $ = cheerio.load(html)
-    
-    // Setup output path
-    const outputDir = path.join(__dirname, '../public')
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true })
-    }
-    const filename = 'komiku-list.json'
-    const filepath = path.join(outputDir, filename)
-    
-    // Set global filepath for shutdown handler
-    currentFilepath = filepath
-    
-    // Load existing list
-    let existingList = []
-    if (fs.existsSync(filepath)) {
-      try {
-        existingList = JSON.parse(fs.readFileSync(filepath, 'utf8'))
-        console.log(`📋 Loaded existing list: ${existingList.length} manhwa\n`)
-      } catch (error) {
-        console.log(`⚠️  Could not load existing list, creating new one\n`)
-      }
-    }
-    
-    // Initialize global state with existing list
-    currentManhwaList = [...existingList]
     
     const manhwaList = []
     const existingListSlugs = new Set(existingList.map(m => m.slug))

@@ -196,7 +196,7 @@ const scrapeManhwaDetail = async (slug) => {
     console.log(`   Chapters: ${manhwaData.totalChapters}`)
     
     // Save to JSON
-    const outputDir = path.join(__dirname, '../public/Chapter/komiku')
+    const outputDir = path.join(__dirname, '../data/Chapter/komiku')
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true })
     }
@@ -302,10 +302,11 @@ const scrapeImagesParallel = async (chapters, batchSize = 10) => {
 const scrapeFromList = async (maxManhwa = 10, includeImages = false) => {
   console.log(`\n🚀 Scraping manhwa from list...`)
   
-  const listPath = path.join(__dirname, '../public/komiku-list.json')
+  const listPath = path.join(__dirname, '../data/komiku-list.json')
   
   if (!fs.existsSync(listPath)) {
     console.error(`❌ List not found! Run: node list-manhwa.js first`)
+    console.error(`   Expected at: ${listPath}`)
     return
   }
   
@@ -324,7 +325,7 @@ const scrapeFromList = async (maxManhwa = 10, includeImages = false) => {
   let failed = 0
   let skipped = 0
   
-  const outputDir = path.join(__dirname, '../public/Chapter/komiku')
+  const outputDir = path.join(__dirname, '../data/Chapter/komiku')
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true })
   }

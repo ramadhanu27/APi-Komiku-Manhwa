@@ -11,6 +11,11 @@
 
 # API endpoints - redirect to Netlify Functions
 [[redirects]]
+  from = "/api/debug"
+  to = "/.netlify/functions/api/debug"
+  status = 200
+
+[[redirects]]
   from = "/api/health"
   to = "/.netlify/functions/api/health"
   status = 200

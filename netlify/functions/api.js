@@ -4,9 +4,35 @@ const path = require('path');
 // Helper function to read JSON files
 function readJSONFile(filename) {
     try {
-        const filePath = path.join(process.cwd(), 'data', filename);
-        const data = fs.readFileSync(filePath, 'utf8');
-        return JSON.parse(data);
+        // Try multiple possible paths for Netlify
+        const possiblePaths = [
+            path.join(process.cwd(), 'data', filename),
+            path.join(__dirname, '..', '..', 'data', filename),
+            path.join('/opt/build/repo/data', filename),
+            path.join(process.env.LAMBDA_TASK_ROOT || '', '..', '..', 'data', filename)
+        ];
+        
+        let data = null;
+        let lastError = null;
+        
+        for (const filePath of possiblePaths) {
+            try {
+                if (fs.existsSync(filePath)) {
+                    console.log(`Reading from: ${filePath}`);
+                    data = fs.readFileSync(filePath, 'utf8');
+                    return JSON.parse(data);
+                }
+            } catch (err) {
+                lastError = err;
+                continue;
+            }
+        }
+        
+        console.error(`Error reading ${filename}:`, lastError);
+        console.error('Tried paths:', possiblePaths);
+        console.error('Current directory:', process.cwd());
+        console.error('__dirname:', __dirname);
+        return null;
     } catch (error) {
         console.error(`Error reading ${filename}:`, error);
         return null;
@@ -66,6 +92,29 @@ exports.handler = async (event, context) => {
         // Extract the API path (remove /.netlify/functions/api prefix)
         const apiPath = requestPath.replace('/.netlify/functions/api', '') || '/';
         const pathParts = apiPath.split('/').filter(p => p);
+
+        // Route: /api/debug - Debug endpoint
+        if (pathParts[0] === 'debug' || (pathParts[0] === 'api' && pathParts[1] === 'debug')) {
+            const dataPath = path.join(process.cwd(), 'data');
+            const publicPath = path.join(process.cwd(), 'public');
+            
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({
+                    status: 'debug',
+                    cwd: process.cwd(),
+                    dirname: __dirname,
+                    dataExists: fs.existsSync(dataPath),
+                    publicExists: fs.existsSync(publicPath),
+                    dataFiles: fs.existsSync(dataPath) ? fs.readdirSync(dataPath) : [],
+                    env: {
+                        LAMBDA_TASK_ROOT: process.env.LAMBDA_TASK_ROOT,
+                        NODE_ENV: process.env.NODE_ENV
+                    }
+                })
+            };
+        }
 
         // Route: /api/health or /health
         if (pathParts[0] === 'health' || (pathParts[0] === 'api' && pathParts[1] === 'health')) {
@@ -334,17 +383,35 @@ exports.handler = async (event, context) => {
 
             // Try to read chapter data
             try {
-                const chapterFile = path.join(process.cwd(), 'public', 'Chapter', 'komiku', `${slug}.json`);
+                // Try multiple possible paths for chapter files
+                const possibleChapterPaths = [
+                    path.join(process.cwd(), 'public', 'Chapter', 'komiku', `${slug}.json`),
+                    path.join(__dirname, '..', '..', 'public', 'Chapter', 'komiku', `${slug}.json`),
+                    path.join('/opt/build/repo/public/Chapter/komiku', `${slug}.json`)
+                ];
                 
-                if (!fs.existsSync(chapterFile)) {
+                let chapters = null;
+                let foundPath = null;
+                
+                for (const chapterPath of possibleChapterPaths) {
+                    if (fs.existsSync(chapterPath)) {
+                        foundPath = chapterPath;
+                        chapters = JSON.parse(fs.readFileSync(chapterPath, 'utf8'));
+                        break;
+                    }
+                }
+                
+                if (!chapters) {
                     return {
                         statusCode: 404,
                         headers,
-                        body: JSON.stringify({ error: 'Chapters not found for this manga' })
+                        body: JSON.stringify({ 
+                            error: 'Chapters not found for this manga',
+                            slug: slug,
+                            triedPaths: possibleChapterPaths
+                        })
                     };
                 }
-
-                const chapters = JSON.parse(fs.readFileSync(chapterFile, 'utf8'));
 
                 // If specific chapter number requested
                 if (chapterNum) {

@@ -9,8 +9,8 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// GitHub raw URL for data
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/ramadhanu27/APi-Komiku-Manhwa/main/data';
+// GitHub raw URL for data (separate repository)
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/ramadhanu27/komiku-data/main/data';
 
 // Cache for data
 let cachedManhwaList = null;

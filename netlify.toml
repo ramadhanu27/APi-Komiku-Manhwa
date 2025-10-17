@@ -3,6 +3,11 @@
   command = "echo 'No build required'"
   functions = "netlify/functions"
 
+[functions]
+  # Include data directory in function bundle
+  included_files = ["data/**", "public/**"]
+  node_bundler = "esbuild"
+
 # Redirect root to API documentation
 [[redirects]]
   from = "/"

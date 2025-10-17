@@ -4,22 +4,32 @@ const path = require('path');
 // Helper function to read JSON files
 function readJSONFile(filename) {
     try {
-        // Try multiple possible paths for Netlify
+        // For Netlify Functions with included_files, files are in the same bundle
         const possiblePaths = [
-            path.join(process.cwd(), 'data', filename),
-            path.join(__dirname, '..', '..', 'data', filename),
-            path.join('/opt/build/repo/data', filename),
-            path.join(process.env.LAMBDA_TASK_ROOT || '', '..', '..', 'data', filename)
+            // Netlify bundled path (most likely)
+            path.resolve(__dirname, '..', '..', 'data', filename),
+            // Alternative bundled path
+            path.resolve(process.cwd(), 'data', filename),
+            // Build time path
+            path.join('/opt/build/repo', 'data', filename),
+            // Lambda runtime path
+            path.join(process.env.LAMBDA_TASK_ROOT || '', 'data', filename),
+            // Relative to function
+            path.join(__dirname, '..', '..', '..', '..', 'data', filename)
         ];
         
         let data = null;
         let lastError = null;
+        let triedPaths = [];
         
         for (const filePath of possiblePaths) {
             try {
-                if (fs.existsSync(filePath)) {
-                    console.log(`Reading from: ${filePath}`);
-                    data = fs.readFileSync(filePath, 'utf8');
+                const normalizedPath = path.normalize(filePath);
+                triedPaths.push(normalizedPath);
+                
+                if (fs.existsSync(normalizedPath)) {
+                    console.log(`✓ Successfully reading from: ${normalizedPath}`);
+                    data = fs.readFileSync(normalizedPath, 'utf8');
                     return JSON.parse(data);
                 }
             } catch (err) {
@@ -28,10 +38,13 @@ function readJSONFile(filename) {
             }
         }
         
-        console.error(`Error reading ${filename}:`, lastError);
-        console.error('Tried paths:', possiblePaths);
-        console.error('Current directory:', process.cwd());
+        console.error(`✗ Failed to read ${filename}`);
+        console.error('Last error:', lastError?.message);
+        console.error('Tried paths:', triedPaths);
+        console.error('CWD:', process.cwd());
         console.error('__dirname:', __dirname);
+        console.error('LAMBDA_TASK_ROOT:', process.env.LAMBDA_TASK_ROOT);
+        
         return null;
     } catch (error) {
         console.error(`Error reading ${filename}:`, error);
@@ -95,24 +108,55 @@ exports.handler = async (event, context) => {
 
         // Route: /api/debug - Debug endpoint
         if (pathParts[0] === 'debug' || (pathParts[0] === 'api' && pathParts[1] === 'debug')) {
-            const dataPath = path.join(process.cwd(), 'data');
-            const publicPath = path.join(process.cwd(), 'public');
+            const debugInfo = {
+                status: 'debug',
+                cwd: process.cwd(),
+                dirname: __dirname,
+                env: {
+                    LAMBDA_TASK_ROOT: process.env.LAMBDA_TASK_ROOT,
+                    NODE_ENV: process.env.NODE_ENV,
+                    AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME
+                },
+                paths: {}
+            };
+            
+            // Check multiple possible data paths
+            const pathsToCheck = [
+                { name: 'cwd/data', path: path.join(process.cwd(), 'data') },
+                { name: 'dirname/../data', path: path.resolve(__dirname, '..', 'data') },
+                { name: 'dirname/../../data', path: path.resolve(__dirname, '..', '..', 'data') },
+                { name: '/opt/build/repo/data', path: '/opt/build/repo/data' },
+                { name: 'lambda/data', path: path.join(process.env.LAMBDA_TASK_ROOT || '', 'data') }
+            ];
+            
+            pathsToCheck.forEach(({ name, path: checkPath }) => {
+                try {
+                    const exists = fs.existsSync(checkPath);
+                    debugInfo.paths[name] = {
+                        path: checkPath,
+                        exists: exists,
+                        files: exists ? fs.readdirSync(checkPath) : []
+                    };
+                } catch (err) {
+                    debugInfo.paths[name] = {
+                        path: checkPath,
+                        exists: false,
+                        error: err.message
+                    };
+                }
+            });
+            
+            // Try to read komiku-list.json
+            const testFile = readJSONFile('komiku-list.json');
+            debugInfo.testRead = {
+                success: testFile !== null,
+                itemCount: testFile ? testFile.length : 0
+            };
             
             return {
                 statusCode: 200,
                 headers,
-                body: JSON.stringify({
-                    status: 'debug',
-                    cwd: process.cwd(),
-                    dirname: __dirname,
-                    dataExists: fs.existsSync(dataPath),
-                    publicExists: fs.existsSync(publicPath),
-                    dataFiles: fs.existsSync(dataPath) ? fs.readdirSync(dataPath) : [],
-                    env: {
-                        LAMBDA_TASK_ROOT: process.env.LAMBDA_TASK_ROOT,
-                        NODE_ENV: process.env.NODE_ENV
-                    }
-                })
+                body: JSON.stringify(debugInfo, null, 2)
             };
         }
 

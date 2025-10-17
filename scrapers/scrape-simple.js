@@ -316,8 +316,9 @@ const scrapeFromList = async (maxManhwa = 10, includeImages = false) => {
   console.log(`📚 Total in list: ${manhwaList.length}`)
   console.log(`📖 Scraping: ${toScrape.length} manhwa`)
   console.log(`🖼️  Include images: ${includeImages}`)
+  console.log(`⚡ Parallel scraping: 2 manhwa at a time`)
   if (includeImages) {
-    console.log(`⚡ Parallel scraping: 10 chapters at a time`)
+    console.log(`⚡ Chapter images: 10 chapters at a time`)
   }
   console.log()
   
@@ -330,64 +331,81 @@ const scrapeFromList = async (maxManhwa = 10, includeImages = false) => {
     fs.mkdirSync(outputDir, { recursive: true })
   }
   
-  for (let i = 0; i < toScrape.length; i++) {
-    const manhwa = toScrape[i]
-    console.log(`[${i + 1}/${toScrape.length}] ${manhwa.title}`)
+  // Process 2 manhwa at a time
+  const PARALLEL_LIMIT = 2
+  
+  for (let i = 0; i < toScrape.length; i += PARALLEL_LIMIT) {
+    const batch = toScrape.slice(i, i + PARALLEL_LIMIT)
     
-    // Check if already scraped
-    const filepath = path.join(outputDir, `${manhwa.slug}.json`)
-    if (fs.existsSync(filepath)) {
-      // Check if need to scrape images
-      if (includeImages) {
-        const existingData = JSON.parse(fs.readFileSync(filepath, 'utf8'))
-        const hasImages = existingData.chapters.some(ch => ch.images && ch.images.length > 0)
-        
-        if (hasImages) {
-          console.log(`  ⏭️  Already scraped with images, skipping...`)
-          skipped++
-          continue
+    // Process batch in parallel
+    const promises = batch.map(async (manhwa, batchIndex) => {
+      const globalIndex = i + batchIndex
+      console.log(`[${globalIndex + 1}/${toScrape.length}] ${manhwa.title}`)
+    
+      // Check if already scraped
+      const filepath = path.join(outputDir, `${manhwa.slug}.json`)
+      if (fs.existsSync(filepath)) {
+        // Check if need to scrape images
+        if (includeImages) {
+          const existingData = JSON.parse(fs.readFileSync(filepath, 'utf8'))
+          const hasImages = existingData.chapters.some(ch => ch.images && ch.images.length > 0)
+          
+          if (hasImages) {
+            console.log(`  ⏭️  Already scraped with images, skipping...`)
+            return { status: 'skipped' }
+          } else {
+            console.log(`  📸 Already scraped, adding images...`)
+            // Continue to scrape images
+          }
         } else {
-          console.log(`  📸 Already scraped, adding images...`)
-          // Continue to scrape images
+          console.log(`  ⏭️  Already scraped, skipping...`)
+          return { status: 'skipped' }
         }
-      } else {
-        console.log(`  ⏭️  Already scraped, skipping...`)
-        skipped++
-        continue
       }
-    }
-    
-    try {
-      const manhwaData = await scrapeManhwaDetail(manhwa.slug)
       
-      if (manhwaData) {
-        // Scrape images if requested
-        if (includeImages && manhwaData.chapters.length > 0) {
-          console.log(`  📸 Scraping images for ${manhwaData.chapters.length} chapters...`)
+      try {
+        const manhwaData = await scrapeManhwaDetail(manhwa.slug)
+        
+        if (manhwaData) {
+          // Scrape images if requested
+          if (includeImages && manhwaData.chapters.length > 0) {
+            console.log(`  📸 Scraping images for ${manhwaData.chapters.length} chapters...`)
+            
+            // Use parallel scraping (10 chapters at a time)
+            await scrapeImagesParallel(manhwaData.chapters, 10)
+            
+            // Re-save with images
+            fs.writeFileSync(filepath, JSON.stringify(manhwaData, null, 2))
+            
+            const totalImages = manhwaData.chapters.reduce((sum, ch) => sum + (ch.images?.length || 0), 0)
+            console.log(`  💾 Updated with ${totalImages} images`)
+          }
           
-          // Use parallel scraping (10 chapters at a time)
-          await scrapeImagesParallel(manhwaData.chapters, 10)
-          
-          // Re-save with images
-          fs.writeFileSync(filepath, JSON.stringify(manhwaData, null, 2))
-          
-          const totalImages = manhwaData.chapters.reduce((sum, ch) => sum + (ch.images?.length || 0), 0)
-          console.log(`  💾 Updated with ${totalImages} images`)
+          return { status: 'success' }
+        } else {
+          return { status: 'failed' }
         }
         
-        success++
-      } else {
-        failed++
+      } catch (error) {
+        console.error(`  ❌ Error: ${error.message}`)
+        return { status: 'failed' }
       }
-      
-      if (i < toScrape.length - 1) {
-        console.log(`⏳ Waiting 1s...`)
-        await delay(1000)
-      }
-      
-    } catch (error) {
-      console.error(`❌ Failed: ${manhwa.title}`)
-      failed++
+    })
+    
+    // Wait for batch to complete
+    const results = await Promise.all(promises)
+    
+    // Count results
+    results.forEach(result => {
+      if (result.status === 'success') success++
+      else if (result.status === 'skipped') skipped++
+      else if (result.status === 'failed') failed++
+    })
+    
+    // Delay between batches
+    if (i + PARALLEL_LIMIT < toScrape.length) {
+      console.log(`⏳ Waiting 2s before next batch...\n`)
+      await delay(500)
     }
   }
   

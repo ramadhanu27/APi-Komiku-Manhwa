@@ -1,239 +1,280 @@
-# 📚 Komiku Scraper
+# 🎌 Komiku Scraper & API
 
-Scraper untuk mengambil data manhwa dari [Komiku.org](https://komiku.org)
+Scraper dan RESTful API untuk data manga/manhwa dari Komiku.org
 
-## 🚀 Installation
+## 📁 Struktur Folder
+
+```
+scraper-komiku/
+├── api/                          # API Server
+│   ├── api-server.js            # Main API server
+│   └── api-example.html         # Interactive API demo
+│
+├── scrapers/                     # Web Scrapers
+│   ├── scraper.js               # Main scraper
+│   ├── scraper-puppeteer.js     # Puppeteer scraper
+│   ├── scrape-simple.js         # Simple scraper
+│   ├── list-manhwa.js           # List scraper
+│   ├── generate-list.js         # Generate manga list
+│   ├── generate-latest-updates.js
+│   └── sync-list.js             # Sync manga list
+│
+├── data/                         # Data Storage
+│   ├── komiku-list.json         # Manga list
+│   ├── latest-updates.json      # Latest updates
+│   ├── chapter-updates.json     # Chapter updates
+│   └── Chapter/                 # Chapter data
+│       └── komiku/              # Individual manga chapters
+│
+├── tests/                        # Testing Scripts
+│   ├── test-api.js              # API testing
+│   ├── test-shutdown.js         # Shutdown test
+│   └── test-title.js            # Title test
+│
+├── config/                       # Configuration Files
+│   ├── vercel.json              # Vercel deployment
+│   ├── railway.json             # Railway deployment
+│   └── render.yaml              # Render deployment
+│
+├── docs/                         # Documentation
+│   ├── README.md                # Main documentation
+│   ├── API-README.md            # API documentation
+│   ├── API-SUMMARY.md           # API summary
+│   ├── DEPLOYMENT-GUIDE.md      # Deployment guide
+│   ├── HOW-TO-SHARE-API.md      # Sharing guide
+│   ├── QUICK-START-API.md       # Quick start
+│   ├── RESTART-API.md           # Restart guide
+│   ├── OPTIMIZATION.md          # Optimization tips
+│   ├── TROUBLESHOOTING.md       # Troubleshooting
+│   ├── WORKFLOW.md              # Workflow guide
+│   ├── SKIP-LOGIC.md            # Skip logic
+│   ├── README-LIST-SCRAPER.md   # List scraper docs
+│   └── Komiku-API.postman_collection.json
+│
+├── example-website/              # Example Website
+│   ├── index.html               # Demo website
+│   └── README.md                # Website docs
+│
+├── .gitignore                    # Git ignore
+├── package.json                  # NPM dependencies
+└── package-lock.json             # NPM lock file
+```
+
+## 🚀 Quick Start
+
+### 1. Installation
 
 ```bash
-cd scraper-komiku
 npm install
 ```
 
-## 📖 Usage
-
-### 1. Scrape Manhwa List (Tanpa Detail)
-
-Scrape daftar manhwa dari halaman pustaka:
+### 2. Jalankan API Server
 
 ```bash
-node scraper.js list 1
+# Production mode
+npm start
+
+# Development mode (auto-reload)
+npm run dev
+
+# Alternative
+npm run api
 ```
 
-**Output:** List manhwa di console (JSON format)
+Server akan berjalan di: **http://localhost:3000**
 
----
-
-### 2. Scrape All Manhwa (Dengan Detail)
-
-Scrape semua manhwa dengan detail lengkap (tanpa images):
+### 3. Testing
 
 ```bash
-node scraper.js all 1
+# Test API
+npm test
+
+# Manual test
+node tests/test-api.js
 ```
 
-**Output:** File JSON di `public/Chapter/komiku/{slug}.json`
-
-**Contoh:**
-```bash
-node scraper.js all 3  # Scrape 3 halaman
-```
-
----
-
-### 3. Scrape All Manhwa (Dengan Images)
-
-Scrape semua manhwa termasuk images chapter:
+### 4. Scraping (Optional)
 
 ```bash
-node scraper.js all 1 --images
+# Scrape manga list
+npm run scrape:list
+
+# Scrape all manga
+npm run scrape:all
+
+# Scrape with images
+npm run scrape:all:images
 ```
 
-⚠️ **Warning:** Ini akan memakan waktu lama karena scrape semua images!
+## 📚 Dokumentasi
 
----
+### API Documentation
+- **[API-README.md](docs/API-README.md)** - Dokumentasi lengkap API
+- **[QUICK-START-API.md](docs/QUICK-START-API.md)** - Panduan cepat
+- **[API-SUMMARY.md](docs/API-SUMMARY.md)** - Ringkasan API
 
-### 4. Scrape Single Manhwa
+### Deployment
+- **[DEPLOYMENT-GUIDE.md](docs/DEPLOYMENT-GUIDE.md)** - Panduan deploy
+- **[HOW-TO-SHARE-API.md](docs/HOW-TO-SHARE-API.md)** - Cara share API
 
-Scrape 1 manhwa saja (tanpa images):
+### Scraper
+- **[README-LIST-SCRAPER.md](docs/README-LIST-SCRAPER.md)** - Scraper docs
+- **[OPTIMIZATION.md](docs/OPTIMIZATION.md)** - Optimization
+- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Troubleshooting
+
+## 🎯 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/manga` | GET | Daftar semua manga |
+| `/api/manga/:slug` | GET | Detail manga |
+| `/api/manga/:slug/details` | GET | Detail lengkap |
+| `/api/chapters/:slug` | GET | Semua chapter |
+| `/api/chapters/:slug/:number` | GET | Chapter spesifik |
+| `/api/genres` | GET | Daftar genre |
+| `/api/latest-updates` | GET | Update terbaru |
+| `/api/search` | GET | Pencarian |
+| `/api/stats` | GET | Statistik |
+| `/api/health` | GET | Health check |
+
+## 💻 Example Usage
+
+```javascript
+const API_URL = 'http://localhost:3000';
+
+// Get all manga
+fetch(`${API_URL}/api/manga?page=1&limit=20`)
+  .then(res => res.json())
+  .then(data => console.log(data));
+
+// Search manga
+fetch(`${API_URL}/api/search?q=academy`)
+  .then(res => res.json())
+  .then(data => console.log(data));
+
+// Get chapters
+fetch(`${API_URL}/api/chapters/99-wooden-stick`)
+  .then(res => res.json())
+  .then(data => console.log(data));
+```
+
+## 🌐 Deployment
+
+### Vercel (Recommended)
 
 ```bash
-node scraper.js single solo-leveling
+npm install -g vercel
+vercel login
+vercel
+vercel --prod
 ```
 
-**Dengan images:**
+### Railway
+
 ```bash
-node scraper.js single solo-leveling --images
+npm install -g @railway/cli
+railway login
+railway init
+railway up
 ```
 
----
+### Render
 
-## 📁 Output Structure
+1. Buka https://render.com
+2. Connect GitHub repository
+3. Deploy!
 
-```
-public/
-└── Chapter/
-    └── komiku/
-        ├── solo-leveling.json
-        ├── the-beginning-after-the-end.json
-        └── ...
-```
-
-### JSON Format:
-
-```json
-{
-  "manhwaTitle": "Solo Leveling",
-  "alternativeTitle": "나 혼자만 레벨업",
-  "manhwaUrl": "https://komiku.org/manga/solo-leveling/",
-  "slug": "solo-leveling",
-  "image": "https://...",
-  "author": "Chugong",
-  "type": "Manhwa",
-  "status": "Completed",
-  "released": "2018",
-  "genres": ["Action", "Adventure", "Fantasy"],
-  "synopsis": "...",
-  "totalChapters": 179,
-  "scrapedAt": "2025-10-15T13:00:00.000Z",
-  "chapters": [
-    {
-      "number": "1",
-      "title": "Chapter 1",
-      "url": "https://komiku.org/ch/solo-leveling-chapter-1/",
-      "date": "2 years ago",
-      "images": [
-        {
-          "page": 1,
-          "url": "https://...",
-          "filename": "page-001.jpg"
-        }
-      ]
-    }
-  ]
-}
-```
-
----
-
-## 🎯 Selectors Used
-
-Berdasarkan struktur HTML Komiku:
-
-### Manhwa List Page:
-- **Container:** `.bge`
-- **Link:** `.kan a`
-- **Title:** `.kan a h3`
-- **Image:** `.bgei img`
-- **Genres:** `.genre span`
-
-### Manhwa Detail Page:
-- **Title:** `.judul h1`
-- **Alternative Title:** `.judul .j2`
-- **Image:** `.ims img`
-- **Synopsis:** `.sin`
-- **Metadata:** `.inftable tr`
-- **Genres:** `.genre li a`
-- **Chapters:** `.chapter-list .judulseries`
-
-### Chapter Page:
-- **Images:** `#Baca_Komik img`
-
----
-
-## ⚙️ Features
-
-- ✅ Scrape manhwa list
-- ✅ Scrape manhwa details
-- ✅ Scrape chapter list
-- ✅ Scrape chapter images (optional)
-- ✅ Auto delay to avoid rate limiting
-- ✅ Error handling
-- ✅ Progress logging
-- ✅ JSON output
-
----
+**Lihat [DEPLOYMENT-GUIDE.md](docs/DEPLOYMENT-GUIDE.md) untuk detail lengkap**
 
 ## 🔧 Configuration
 
-Edit `scraper.js` untuk customize:
+### Environment Variables
 
-```javascript
-// Base URL
-const BASE_URL = 'https://komiku.org'
-
-// Delay between requests (ms)
-await delay(2000)  // 2 seconds
-
-// Headers
-const headers = {
-  'User-Agent': '...',
-  'Referer': 'https://komiku.org/'
-}
+```bash
+PORT=3000              # Server port
+NODE_ENV=production    # Environment
 ```
 
----
+### Config Files
 
-## 📊 Examples
+- `config/vercel.json` - Vercel configuration
+- `config/railway.json` - Railway configuration
+- `config/render.yaml` - Render configuration
 
-### Scrape 5 halaman manhwa:
+## 📊 Features
+
+### API Features
+- ✅ RESTful API
+- ✅ CORS enabled
+- ✅ Pagination
+- ✅ Search & Filter
+- ✅ Error handling
+- ✅ Comprehensive documentation
+
+### Scraper Features
+- ✅ Manga list scraping
+- ✅ Chapter scraping
+- ✅ Image downloading
+- ✅ Auto-retry on failure
+- ✅ Progress tracking
+
+## 🧪 Testing
+
+### API Testing
+
 ```bash
-node scraper.js all 5
-```
-
-### Scrape Solo Leveling dengan images:
-```bash
-node scraper.js single solo-leveling --images
-```
-
-### Test scraper (list only):
-```bash
+# Run all tests
 npm test
+
+# Manual testing
+node tests/test-api.js
 ```
 
----
+### Interactive Testing
 
-## ⚠️ Notes
+1. Buka `api/api-example.html` di browser
+2. Atau akses http://localhost:3000 setelah server running
 
-1. **Rate Limiting:** Scraper menggunakan delay untuk menghindari rate limiting
-2. **Images:** Scraping images memakan waktu lama, gunakan `--images` hanya jika perlu
-3. **Storage:** Pastikan ada cukup space untuk menyimpan images
-4. **Legal:** Gunakan scraper ini untuk personal use only
+## 📝 Scripts
 
----
-
-## 🐛 Troubleshooting
-
-### Error: "Cannot find module 'axios'"
 ```bash
-npm install
+npm start              # Start API server
+npm run dev            # Development mode
+npm run api            # Start API (alternative)
+npm test               # Run tests
+npm run scrape:list    # Scrape manga list
+npm run scrape:all     # Scrape all manga
 ```
-
-### Error: "ECONNREFUSED"
-- Check internet connection
-- Komiku.org mungkin down
-- Try again later
-
-### No images scraped
-- Check selector `#Baca_Komik img`
-- Komiku mungkin update struktur HTML
-- Update selector di `scrapeChapterImages()`
-
----
-
-## 📝 TODO
-
-- [ ] Download images to local
-- [ ] Multi-threading untuk faster scraping
-- [ ] Resume scraping dari last position
-- [ ] Update existing manhwa
-- [ ] Scrape comments/ratings
-
----
 
 ## 🤝 Contributing
 
-Feel free to improve this scraper!
+1. Fork repository
+2. Create feature branch
+3. Commit changes
+4. Push to branch
+5. Create Pull Request
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+## 🆘 Support
+
+- **Documentation**: Check `docs/` folder
+- **Issues**: Create GitHub issue
+- **Questions**: Check TROUBLESHOOTING.md
+
+## 🎉 Credits
+
+- Data source: Komiku.org
+- Built with Express.js, Cheerio, Puppeteer
 
 ---
 
-**Happy Scraping! 📚✨**
+**Made with ❤️ for manga lovers**
+
+**Quick Links:**
+- [API Documentation](docs/API-README.md)
+- [Deployment Guide](docs/DEPLOYMENT-GUIDE.md)
+- [Example Website](example-website/)
+- [Postman Collection](docs/Komiku-API.postman_collection.json)

@@ -16,16 +16,18 @@ const readJSONFile = (filePath) => {
     const data = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
+    console.error('Error reading file:', filePath, error.message);
     return null;
   }
 };
 
 // Helper function to get all chapter files
 const getAllChapterFiles = () => {
-  const chapterDir = path.join(__dirname, 'Chapter', 'komiku');
+  const chapterDir = path.join(__dirname, '..', 'data', 'Chapter', 'komiku');
   try {
     return fs.readdirSync(chapterDir).filter(file => file.endsWith('.json'));
   } catch (error) {
+    console.error('Error reading chapter directory:', error.message);
     return [];
   }
 };
@@ -42,7 +44,7 @@ const getAllChapterFiles = () => {
  *   - genre: filter by genre
  */
 app.get('/api/manga', (req, res) => {
-  const mangaList = readJSONFile(path.join(__dirname, 'komiku-list.json'));
+  const mangaList = readJSONFile(path.join(__dirname, '..', 'data', 'komiku-list.json'));
   
   if (!mangaList) {
     return res.status(500).json({ error: 'Failed to load manga list' });
@@ -89,7 +91,7 @@ app.get('/api/manga', (req, res) => {
  * Get manga details by slug
  */
 app.get('/api/manga/:slug', (req, res) => {
-  const mangaList = readJSONFile(path.join(__dirname, 'komiku-list.json'));
+  const mangaList = readJSONFile(path.join(__dirname, '..', 'data', 'komiku-list.json'));
   
   if (!mangaList) {
     return res.status(500).json({ error: 'Failed to load manga list' });
@@ -115,7 +117,7 @@ app.get('/api/manga/:slug', (req, res) => {
  * Get all available genres
  */
 app.get('/api/genres', (req, res) => {
-  const mangaList = readJSONFile(path.join(__dirname, 'komiku-list.json'));
+  const mangaList = readJSONFile(path.join(__dirname, '..', 'data', 'komiku-list.json'));
   
   if (!mangaList) {
     return res.status(500).json({ error: 'Failed to load manga list' });
@@ -147,7 +149,7 @@ app.get('/api/genres', (req, res) => {
  *   - limit: items per page (default: 50)
  */
 app.get('/api/chapters/:slug', (req, res) => {
-  const chapterFile = path.join(__dirname, 'Chapter', 'komiku', `${req.params.slug}.json`);
+  const chapterFile = path.join(__dirname, '..', 'data', 'Chapter', 'komiku', `${req.params.slug}.json`);
   const chapterData = readJSONFile(chapterFile);
 
   if (!chapterData) {
@@ -183,7 +185,7 @@ app.get('/api/chapters/:slug', (req, res) => {
  * Get specific chapter details with images
  */
 app.get('/api/chapters/:slug/:chapterNumber', (req, res) => {
-  const chapterFile = path.join(__dirname, 'Chapter', 'komiku', `${req.params.slug}.json`);
+  const chapterFile = path.join(__dirname, '..', 'data', 'Chapter', 'komiku', `${req.params.slug}.json`);
   const chapterData = readJSONFile(chapterFile);
 
   if (!chapterData) {
@@ -215,7 +217,7 @@ app.get('/api/chapters/:slug/:chapterNumber', (req, res) => {
  * Get complete manga details including metadata from chapter file
  */
 app.get('/api/manga/:slug/details', (req, res) => {
-  const chapterFile = path.join(__dirname, 'Chapter', 'komiku', `${req.params.slug}.json`);
+  const chapterFile = path.join(__dirname, '..', 'data', 'Chapter', 'komiku', `${req.params.slug}.json`);
   const chapterData = readJSONFile(chapterFile);
 
   if (!chapterData) {
@@ -247,7 +249,7 @@ app.get('/api/manga/:slug/details', (req, res) => {
  *   - limit: items per page (default: 20)
  */
 app.get('/api/latest-updates', (req, res) => {
-  const latestUpdatesData = readJSONFile(path.join(__dirname, 'latest-updates.json'));
+  const latestUpdatesData = readJSONFile(path.join(__dirname, '..', 'data', 'latest-updates.json'));
   
   if (!latestUpdatesData) {
     return res.status(500).json({ error: 'Failed to load latest updates' });
@@ -288,7 +290,7 @@ app.get('/api/latest-updates', (req, res) => {
  *   - status: filter by status (Ongoing, Completed)
  */
 app.get('/api/search', (req, res) => {
-  const mangaList = readJSONFile(path.join(__dirname, 'komiku-list.json'));
+  const mangaList = readJSONFile(path.join(__dirname, '..', 'data', 'komiku-list.json'));
   
   if (!mangaList) {
     return res.status(500).json({ error: 'Failed to load manga list' });
@@ -338,7 +340,7 @@ app.get('/api/search', (req, res) => {
  * Get API statistics
  */
 app.get('/api/stats', (req, res) => {
-  const mangaList = readJSONFile(path.join(__dirname, 'komiku-list.json'));
+  const mangaList = readJSONFile(path.join(__dirname, '..', 'data', 'komiku-list.json'));
   const chapterFiles = getAllChapterFiles();
 
   if (!mangaList) {

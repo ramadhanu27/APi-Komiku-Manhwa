@@ -3,7 +3,7 @@ services:
     name: komiku-api
     env: node
     buildCommand: npm install
-    startCommand: npm run api
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production

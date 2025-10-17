@@ -7,14 +7,14 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node api-server.js",
-    "scrape:list": "node scraper.js list 1",
-    "scrape:all": "node scraper.js all 1",
-    "scrape:all:images": "node scraper.js all 1 --images",
-    "scrape:single": "node scraper.js single",
-    "test": "node scraper.js list 1",
-    "api": "node api-server.js",
-    "dev": "nodemon api-server.js"
+    "start": "node api/api-server.js",
+    "scrape:list": "node scrapers/scraper.js list 1",
+    "scrape:all": "node scrapers/scraper.js all 1",
+    "scrape:all:images": "node scrapers/scraper.js all 1 --images",
+    "scrape:single": "node scrapers/scraper.js single",
+    "test": "node tests/test-api.js",
+    "api": "node api/api-server.js",
+    "dev": "nodemon api/api-server.js"
   },
   "keywords": [
     "scraper",

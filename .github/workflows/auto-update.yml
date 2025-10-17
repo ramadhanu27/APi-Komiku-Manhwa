@@ -1,0 +1,67 @@
+name: Auto Update Manga Data
+
+on:
+  # Run every 6 hours
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: 'Type of update'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - list
+          - updates
+          - chapters
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          npm install --production=false
+      
+      - name: Run auto-update
+        run: |
+          node scrapers/auto-update.js ${{ github.event.inputs.update_type || 'all' }}
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/
+          git add update.log
+          git commit -m "🤖 Auto-update: $(date +'%Y-%m-%d %H:%M:%S')"
+          git push
+      
+      - name: Trigger Vercel deployment
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          echo "Changes detected. Vercel will auto-deploy."

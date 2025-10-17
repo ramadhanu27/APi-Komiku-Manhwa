@@ -14,7 +14,12 @@
     "scrape:single": "node scrapers/scraper.js single",
     "test": "node tests/test-api.js",
     "api": "node api/api-server.js",
-    "dev": "nodemon api/api-server.js"
+    "dev": "nodemon api/api-server.js",
+    "update": "node update.js all",
+    "update:list": "node update.js list",
+    "update:updates": "node update.js updates",
+    "update:chapters": "node update.js chapters",
+    "update:schedule": "node scrapers/auto-update.js schedule"
   },
   "keywords": [
     "scraper",

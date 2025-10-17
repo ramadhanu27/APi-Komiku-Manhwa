@@ -9,22 +9,36 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// GitHub raw URL for data (separate repository)
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/ramadhanu27/komiku-data/main/data';
+// GitHub raw URL for data
+// Try separate data repo first, fallback to main repo
+const DATA_REPO_BASE = 'https://raw.githubusercontent.com/ramadhanu27/komiku-data/main/data';
+const MAIN_REPO_BASE = 'https://raw.githubusercontent.com/ramadhanu27/APi-Komiku-Manhwa/main/data';
+
+let GITHUB_RAW_BASE = DATA_REPO_BASE; // Start with data repo
 
 // Cache for data
 let cachedManhwaList = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Helper function to fetch from GitHub
+// Helper function to fetch from GitHub with fallback
 const fetchFromGitHub = async (path) => {
   try {
-    const response = await axios.get(`${GITHUB_RAW_BASE}/${path}`);
+    // Try data repo first
+    const response = await axios.get(`${DATA_REPO_BASE}/${path}`, { timeout: 10000 });
     return response.data;
   } catch (error) {
-    console.error('Error fetching from GitHub:', path, error.message);
-    return null;
+    console.log('Data repo failed, trying main repo...', error.message);
+    
+    try {
+      // Fallback to main repo
+      const response = await axios.get(`${MAIN_REPO_BASE}/${path}`, { timeout: 10000 });
+      GITHUB_RAW_BASE = MAIN_REPO_BASE; // Switch to main repo for future requests
+      return response.data;
+    } catch (fallbackError) {
+      console.error('Both repos failed:', path, fallbackError.message);
+      return null;
+    }
   }
 };
 
@@ -56,18 +70,23 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     message: 'Komiku API is running',
     timestamp: new Date().toISOString(),
-    dataSource: 'GitHub Raw'
+    dataSource: 'GitHub Raw',
+    currentRepo: GITHUB_RAW_BASE === DATA_REPO_BASE ? 'komiku-data' : 'APi-Komiku-Manhwa'
   });
 });
 
 // ==================== MANGA LIST ENDPOINTS ====================
 
 app.get('/api/manga', async (req, res) => {
-  const manhwaList = await getManhwaList();
-  
-  if (!manhwaList) {
-    return res.status(500).json({ error: 'Failed to load manga list' });
-  }
+  try {
+    const manhwaList = await getManhwaList();
+    
+    if (!manhwaList) {
+      return res.status(500).json({ 
+        error: 'Failed to load manga list',
+        message: 'Data source unavailable. Please try again later.'
+      });
+    }
 
   const { page = 1, limit = 20, search, genre } = req.query;
   
@@ -93,14 +112,21 @@ app.get('/api/manga', async (req, res) => {
   const endIndex = startIndex + parseInt(limit);
   const paginatedData = filtered.slice(startIndex, endIndex);
   
-  res.json({
-    success: true,
-    page: parseInt(page),
-    limit: parseInt(limit),
-    total: filtered.length,
-    totalPages: Math.ceil(filtered.length / limit),
-    data: paginatedData
-  });
+    res.json({
+      success: true,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: filtered.length,
+      totalPages: Math.ceil(filtered.length / limit),
+      data: paginatedData
+    });
+  } catch (error) {
+    console.error('Error in /api/manga:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
 });
 
 app.get('/api/list', async (req, res) => {
@@ -283,6 +309,35 @@ app.get('/api/latest-updates', async (req, res) => {
   }
 
   res.json(latestData);
+});
+
+// ==================== ERROR HANDLERS ====================
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Endpoint ${req.path} not found`,
+    availableEndpoints: [
+      '/api/health',
+      '/api/manga',
+      '/api/list',
+      '/api/genres',
+      '/api/chapters/:slug',
+      '/api/stats',
+      '/api/search'
+    ]
+  });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message || 'Something went wrong',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // ==================== START SERVER ====================

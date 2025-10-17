@@ -1,0 +1,61 @@
+name: Auto Scrape Latest Updates
+
+on:
+  # Run every 6 hours
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  scrape-updates:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          npm install cheerio axios
+      
+      - name: Scrape latest updates
+        run: |
+          node scrapers/generate-latest-updates.js
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain data/latest-updates.json) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "New updates found!"
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No new updates"
+          fi
+      
+      - name: Commit and push if changed
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/latest-updates.json
+          git commit -m "🤖 Auto-scrape: Update latest updates - $(date +'%Y-%m-%d %H:%M')"
+          git push
+      
+      - name: Create summary
+        run: |
+          UPDATE_COUNT=$(jq '.updates | length' data/latest-updates.json)
+          echo "### 🔄 Latest Updates Scraped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Updates Found:** $UPDATE_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ✅ Success" >> $GITHUB_STEP_SUMMARY

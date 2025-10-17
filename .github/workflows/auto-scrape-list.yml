@@ -1,0 +1,61 @@
+name: Auto Scrape Manga List
+
+on:
+  # Run every day at 00:00 UTC (07:00 WIB)
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  scrape-list:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          npm install cheerio axios
+      
+      - name: Scrape manga list
+        run: |
+          node scrapers/generate-list.js
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain data/komiku-list.json) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "New manga found!"
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No new manga"
+          fi
+      
+      - name: Commit and push if changed
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/komiku-list.json
+          git commit -m "🤖 Auto-scrape: Update manga list - $(date +'%Y-%m-%d')"
+          git push
+      
+      - name: Create summary
+        run: |
+          MANGA_COUNT=$(jq '. | length' data/komiku-list.json)
+          echo "### 📚 Manga List Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Manga:** $MANGA_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date:** $(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ✅ Success" >> $GITHUB_STEP_SUMMARY

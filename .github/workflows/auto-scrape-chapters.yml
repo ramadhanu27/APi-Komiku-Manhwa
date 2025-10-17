@@ -1,0 +1,76 @@
+name: Auto Scrape Chapters (Weekly)
+
+on:
+  # Run every Sunday at 00:00 UTC
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      manga_slug:
+        description: 'Manga slug to scrape (leave empty for all)'
+        required: false
+        default: ''
+
+jobs:
+  scrape-chapters:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # 2 hours timeout
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          npm install cheerio axios puppeteer
+      
+      - name: Scrape chapters (selective)
+        if: github.event.inputs.manga_slug == ''
+        run: |
+          # Scrape only outdated chapters (older than 7 days)
+          node scrapers/scrape-outdated-chapters.js
+      
+      - name: Scrape specific manga
+        if: github.event.inputs.manga_slug != ''
+        run: |
+          node scrapers/scraper.js single ${{ github.event.inputs.manga_slug }}
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain data/Chapter/) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            CHANGED_FILES=$(git status --porcelain data/Chapter/ | wc -l)
+            echo "changed_count=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "changed_count=0" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit and push if changed
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/Chapter/
+          git commit -m "🤖 Auto-scrape: Update chapters (${{ steps.check_changes.outputs.changed_count }} files) - $(date +'%Y-%m-%d')"
+          git push
+      
+      - name: Create summary
+        run: |
+          TOTAL_CHAPTERS=$(find data/Chapter/komiku/ -name "*.json" | wc -l)
+          echo "### 📖 Chapters Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Chapter Files:** $TOTAL_CHAPTERS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files Updated:** ${{ steps.check_changes.outputs.changed_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date:** $(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ✅ Success" >> $GITHUB_STEP_SUMMARY

@@ -589,9 +589,14 @@
             const countElement = document.getElementById('manhwaCount');
             
             try {
+                console.log('Fetching manhwa count from:', BASE_URL + '/api/stats');
                 const response = await fetch(BASE_URL + '/api/stats');
-                const data = await response.json();
-                const count = data.totalManhwa || data.total || 0;
+                const result = await response.json();
+                console.log('API Response:', result);
+                
+                const data = result.data || result;
+                const count = data.totalManga || data.totalManhwa || data.total || 0;
+                console.log('Manhwa count:', count);
                 
                 // Animate count update
                 countElement.innerHTML = `<span class="inline-block animate-bounce">${count}+</span>`;

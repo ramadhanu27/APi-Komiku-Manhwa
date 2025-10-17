@@ -114,19 +114,17 @@ app.get('/api/manga/:slug', (req, res) => {
 
 /**
  * GET /api/genres
- * Get all available genres
+ * Get all available genres (from chapter files)
  */
 app.get('/api/genres', (req, res) => {
-  const mangaList = readJSONFile(path.join(__dirname, '..', 'data', 'komiku-list.json'));
-  
-  if (!mangaList) {
-    return res.status(500).json({ error: 'Failed to load manga list' });
-  }
-
+  const chapterFiles = getAllChapterFiles();
   const genresSet = new Set();
-  mangaList.forEach(manga => {
-    if (manga.genres) {
-      manga.genres.forEach(genre => genresSet.add(genre));
+  
+  // Get genres from chapter files
+  chapterFiles.forEach(file => {
+    const chapterData = readJSONFile(path.join(__dirname, '..', 'data', 'Chapter', 'komiku', file));
+    if (chapterData && chapterData.genres) {
+      chapterData.genres.forEach(genre => genresSet.add(genre));
     }
   });
 

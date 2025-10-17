@@ -11,7 +11,7 @@ app.use(express.json());
 
 // GitHub raw URL for data
 // Try separate data repo first, fallback to main repo
-const DATA_REPO_BASE = 'https://raw.githubusercontent.com/ramadhanu27/komiku-data/main/data';
+const DATA_REPO_BASE = 'https://raw.githubusercontent.com/ramadhanu27/Komiku-Data/main/data';
 const MAIN_REPO_BASE = 'https://raw.githubusercontent.com/ramadhanu27/APi-Komiku-Manhwa/main/data';
 
 let GITHUB_RAW_BASE = DATA_REPO_BASE; // Start with data repo

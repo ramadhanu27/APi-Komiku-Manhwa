@@ -365,45 +365,14 @@ app.get('/api/stats', (req, res) => {
   });
 });
 
-// ==================== ROOT & HEALTH CHECK ====================
+// ==================== ROOT ENDPOINT ====================
 
 /**
  * GET /
- * API root - documentation
+ * Root endpoint - Serve documentation page
  */
 app.get('/', (req, res) => {
-  res.json({
-    name: 'Komiku API',
-    version: '1.0.0',
-    description: 'RESTful API for Komiku manga data',
-    endpoints: {
-      manga: {
-        'GET /api/manga': 'Get all manga (with pagination, search, genre filter)',
-        'GET /api/manga/:slug': 'Get manga by slug',
-        'GET /api/manga/:slug/details': 'Get complete manga details with metadata'
-      },
-      chapters: {
-        'GET /api/chapters/:slug': 'Get all chapters for a manga',
-        'GET /api/chapters/:slug/:chapterNumber': 'Get specific chapter with images'
-      },
-      genres: {
-        'GET /api/genres': 'Get all available genres'
-      },
-      updates: {
-        'GET /api/latest-updates': 'Get latest manga updates'
-      },
-      search: {
-        'GET /api/search': 'Advanced search (query params: q, genre, page, limit)'
-      },
-      stats: {
-        'GET /api/stats': 'Get API statistics'
-      },
-      health: {
-        'GET /api/health': 'Health check endpoint'
-      }
-    },
-    documentation: 'See API-README.md for detailed documentation'
-  });
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 /**

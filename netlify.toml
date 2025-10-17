@@ -1,20 +1,66 @@
 [build]
   publish = "."
   command = "echo 'No build required'"
+  functions = "netlify/functions"
 
+# Redirect root to API documentation
 [[redirects]]
   from = "/"
   to = "/api/index.html"
   status = 200
 
+# API endpoints - redirect to Netlify Functions
 [[redirects]]
-  from = "/api/*"
-  to = "/api/:splat"
+  from = "/api/health"
+  to = "/.netlify/functions/api/health"
   status = 200
 
+[[redirects]]
+  from = "/api/stats"
+  to = "/.netlify/functions/api/stats"
+  status = 200
+
+[[redirects]]
+  from = "/api/list"
+  to = "/.netlify/functions/api/list"
+  status = 200
+
+[[redirects]]
+  from = "/api/manga/*"
+  to = "/.netlify/functions/api/manga/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/latest-updates"
+  to = "/.netlify/functions/api/latest-updates"
+  status = 200
+
+[[redirects]]
+  from = "/api/genres"
+  to = "/.netlify/functions/api/genres"
+  status = 200
+
+[[redirects]]
+  from = "/api/search"
+  to = "/.netlify/functions/api/search"
+  status = 200
+
+[[redirects]]
+  from = "/api/chapters/*"
+  to = "/.netlify/functions/api/chapters/:splat"
+  status = 200
+
+# CORS headers
 [[headers]]
   for = "/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type"

@@ -9,45 +9,24 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Data sources
-// Primary: Netlify (fast CDN)
-// Fallback: GitHub raw
-const NETLIFY_BASE = 'https://data-komiku.netlify.app';
-const DATA_REPO_BASE = 'https://raw.githubusercontent.com/ramadhanu27/Komiku-Data/main/data';
-const MAIN_REPO_BASE = 'https://raw.githubusercontent.com/ramadhanu27/APi-Komiku-Manhwa/main/data';
-
-let GITHUB_RAW_BASE = NETLIFY_BASE; // Start with Netlify (fastest)
+// Data source: Netlify CDN only (no GitHub fallback needed)
+const NETLIFY_BASE = 'https://manhwaapi.netlify.app';
 
 // Cache for data
 let cachedManhwaList = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Helper function to fetch data with multiple fallbacks
+// Helper function to fetch data from Netlify
 const fetchFromGitHub = async (path) => {
-  // Try Netlify first (fastest, CDN)
   try {
-    const response = await axios.get(`${NETLIFY_BASE}/${path}`, { timeout: 10000 });
+    const url = `${NETLIFY_BASE}/${path}`;
+    console.log(`Fetching: ${url}`);
+    const response = await axios.get(url, { timeout: 10000 });
     return response.data;
   } catch (error) {
-    console.log('Netlify failed, trying GitHub data repo...', error.message);
-    
-    // Fallback to GitHub data repo
-    try {
-      const response = await axios.get(`${DATA_REPO_BASE}/${path}`, { timeout: 10000 });
-      return response.data;
-    } catch (error2) {
-      console.log('Data repo failed, trying main repo...', error2.message);
-      
-      // Final fallback to main repo
-      try {
-        const response = await axios.get(`${MAIN_REPO_BASE}/${path}`, { timeout: 10000 });
-        return response.data;
-      } catch (error3) {
-        console.error('All sources failed:', path, error3.message);
-        return null;
-      }
-    }
+    console.error(`Failed to fetch ${path}:`, error.message);
+    return null;
   }
 };
 
@@ -79,8 +58,8 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     message: 'Komiku API is running',
     timestamp: new Date().toISOString(),
-    dataSource: 'Netlify CDN (primary) + GitHub (fallback)',
-    primarySource: 'https://data-komiku.netlify.app'
+    dataSource: 'Netlify CDN',
+    netlifyUrl: 'https://manhwaapi.netlify.app'
   });
 });
 
